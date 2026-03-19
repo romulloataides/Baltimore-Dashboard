@@ -24,11 +24,15 @@ jobs:
         with:
           r-version: 'release'
 
-      # 3. Install the required R packages
-      - name: Install R Packages
-        run: |
-          install.packages(c("tidyverse", "jsonlite"))
-        shell: Rscript {0}
+    # 3. Install R Packages (The Robust Way)
+      - name: Install Dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::tidyverse
+            any::jsonlite
+            any::sf
+            any::RSocrata
 
       # 4. Run your ETL script to generate the new data.json
       - name: Run Data Pipeline Script
