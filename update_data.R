@@ -108,8 +108,6 @@ nsa_acs_summary <- st_intersection(nsa_boundaries, baltimore_acs) %>%
   summarize(pv = round(weighted.mean(pv, as.numeric(intersect_area), na.rm = TRUE), 1))
 
 # 5. MERGE: Combine Data and Preserve Static Baselines
-# We load the hardcoded base data to preserve metrics we haven't automated yet (like Life Expectancy)
-# and then overwrite the specific SDoH metrics we just calculated live.
 base_data_path <- "data.json"
 if(file.exists(base_data_path)) {
   current_data <- read_json(base_data_path, simplifyVector = TRUE) %>%
@@ -119,11 +117,21 @@ if(file.exists(base_data_path)) {
 }
 
 final_dashboard_data <- current_data %>%
-  # Remove the old poverty and 311 columns so we can replace them with live data
+  # Remove the old columns so we can replace them with live data
   select(-any_of(c("pv", "rt", "dp", "ws", "hz"))) %>%
+  # Join the static Census data
   left_join(nsa_acs_summary, by = "Neighborhood") %>%
-  left_join(nsa_311_summary, by = "Neighborhood") %>%
-  mutate(across(c(pv, rt, dp, ws, hz), ~replace_na(., 0)))
+  # Join the longitudinal 311 array data
+  left_join(nsa_311_arrays, by = "Neighborhood") %>%
+  
+  # Handle missing data cleanly
+  # 1. Standard replacement for the single-value Census poverty variable
+  mutate(pv = replace_na(pv, 0)) %>%
+  # 2. Array replacement for the 311 longitudinal variables
+  # If a neighborhood is completely missing from the 311 data, replace it with an array of 8 zeros
+  mutate(across(c(rt, dp, ws, hz), ~ lapply(., function(x) {
+    if(is.null(x) || all(is.na(x))) rep(0, 8) else x
+  })))
 
 # 6. LOAD: Write to JSON
 print("Formatting and writing output...")
@@ -133,4 +141,4 @@ json_ready_data <- final_dashboard_data %>%
   purrr::transpose()
 
 write_json(json_ready_data, "data.json", auto_unbox = TRUE, pretty = TRUE)
-print("Pipeline Complete! data.json updated.")
+print("Pipeline Complete! Longitudinal data.json updated.")
