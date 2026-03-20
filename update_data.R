@@ -2,6 +2,7 @@ library(tidyverse)
 library(sf)
 library(jsonlite)
 library(tidycensus)
+library(httr)
 
 print("Starting Baltimore Health Data Pipeline...")
 
@@ -12,12 +13,16 @@ census_api_key(Sys.getenv("CENSUS_API_KEY"))
 print("Fetching NSA Boundaries...")
 nsa_url <- "https://opendata.baltimorecity.gov/egis/rest/services/Hosted/Neighborhood_Statistical_Areas/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
 
-# Workaround: Download the file locally first to bypass GDAL's finicky web driver
-# We add a User-Agent disguise so the city's server doesn't block the automated request
-options(HTTPUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-download.file(nsa_url, destfile = "nsa_boundaries.geojson", mode = "wb", quiet = TRUE)
+# The Bulletproof Download: Mimic a browser and fetch the raw data securely
+response <- GET(nsa_url, add_headers(`User-Agent` = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"))
 
-# Read the local file instead of the URL
+# Stop the script with a clear message if the server blocks us (so we don't get corrupt files)
+stop_for_status(response) 
+
+# Save the pure, raw JSON content to the server's hard drive
+writeBin(content(response, "raw"), "nsa_boundaries.geojson")
+
+# Read the newly saved local file
 nsa_boundaries <- st_read("nsa_boundaries.geojson", quiet = TRUE) %>%
   st_transform(crs = 4326) %>%
   select(Neighborhood = Name, geometry) %>%
@@ -125,6 +130,3 @@ json_ready_data <- final_dashboard_data %>%
 
 write_json(json_ready_data, "data.json", auto_unbox = TRUE, pretty = TRUE)
 print("Pipeline Complete! Longitudinal data.json updated.")
-
-write_json(json_ready_data, "data.json", auto_unbox = TRUE, pretty = TRUE)
-print("Pipeline Complete! Longitudinal data.json updated.")updated.")
