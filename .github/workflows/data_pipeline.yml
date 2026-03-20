@@ -24,15 +24,17 @@ jobs:
         with:
           r-version: 'release'
 
-    # 3. Install R Packages (The Robust Way)
-      - name: Install Dependencies
-        uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          packages: |
-            any::tidyverse
-            any::jsonlite
-            any::sf
-            any::RSocrata
+# 3. Install Linux System Libraries (Required for spatial data and tidyverse)
+      - name: Install System Libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libgdal-dev libudunits2-dev libgeos-dev libproj-dev
+
+      # 4. Install R Packages 
+      - name: Install R Packages
+        run: |
+          install.packages(c("tidyverse", "jsonlite", "sf", "RSocrata"))
+        shell: Rscript {0}
 
       # 4. Run your ETL script to generate the new data.json
       - name: Run Data Pipeline Script
