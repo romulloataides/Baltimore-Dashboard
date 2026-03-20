@@ -102,7 +102,7 @@ body{margin:0;background:#f4f7fb;font-family:Inter,system-ui,-apple-system,Blink
 </style>
 </head>
 <body>
-
+ 
 <div id="bd">
 <div id="hdr">
   <div style="display:flex;align-items:center;gap:8px">
@@ -212,7 +212,7 @@ body{margin:0;background:#f4f7fb;font-family:Inter,system-ui,-apple-system,Blink
     </div>
   </div>
 </div>
-
+ 
 <div id="share-modal" onclick="if(event.target===this)closeModal()">
   <div id="share-box">
     <div class="sbtitle">Share this view</div>
@@ -249,18 +249,18 @@ body{margin:0;background:#f4f7fb;font-family:Inter,system-ui,-apple-system,Blink
     <div class="src-n">Link encodes: neighborhoods A & B, metric, and year. Anyone with the link sees the same view.</div>
   </div>
 </div>
-
+ 
 <div class="toast" id="toast"></div>
-
+ 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 const YEARS=[2016,2017,2018,2019,2020,2021,2022,2023];
-
+ 
 // We initialize BASE as an empty object here. It will be populated by the fetch request.
 let BASE={};
-
+ 
 const RATES={hi:.4,le:.08,as:-.6,la:-.5,va:-.2,pv:-.3,un:-.25,hs:.15,fd:.3,gs:.1,hw:-.2,cr:-.5,in:.8,tp:.2,dp:.4};
 function yv(nsa,k,yi){
   const b=BASE[nsa];
@@ -291,10 +291,10 @@ const REPORTS=[
   {lat:39.300,lng:-76.630,nsa:'Upton/Druid Heights',cat:'environmental',color:'#BA7517',title:'Air quality near I-83',status:'open',c:12,d:0,days:9},
 ];
 const THREE11=[{lat:39.310,lng:-76.665,cnt:180},{lat:39.248,lng:-76.622,cnt:140},{lat:39.285,lng:-76.620,cnt:88},{lat:39.302,lng:-76.590,cnt:64},{lat:39.278,lng:-76.643,cnt:58}];
-
+ 
 let map,geo,rMks=[],cMks=[],curM='hi',curYI=7,pinA=null,pinB=null,activeSlot='a',ls={c:true,r:true,'3':false};
 let playing=false,playT=null,trajChart=null;
-
+ 
 // ── URL state engine ─────────────────────────────────────────────────────────
 function buildURL(){
   const base=`${window.location.origin}${window.location.pathname}`;
@@ -305,11 +305,11 @@ function buildURL(){
   params.set('y',YEARS[curYI]);
   return `${base}?${params.toString()}`;
 }
-
+ 
 function encodeNSA(name){return name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');}
-
+ 
 function decodeNSA(slug){if(!slug)return null;const lower=slug.replace(/-/g,' ');for(const k of Object.keys(BASE)){if(k.toLowerCase()===lower)return k;if(k.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()===lower)return k;}return null;}
-
+ 
 function loadFromURL(){
   try{
     const p=new URLSearchParams(window.location.search);
@@ -327,7 +327,7 @@ function loadFromURL(){
     }
   }catch(e){}
 }
-
+ 
 function updateShareStrip(){
   const url=buildURL();
   document.getElementById('share-url-inline').textContent=url;
@@ -338,7 +338,7 @@ function updateShareStrip(){
     document.getElementById('share-strip').classList.remove('visible');
   }
 }
-
+ 
 function copyURL(){
   const url=buildURL();
   navigator.clipboard.writeText(url).then(()=>{
@@ -346,7 +346,7 @@ function copyURL(){
     b.style.display='block';setTimeout(()=>b.style.display='none',2000);
   }).catch(()=>toast('URL: '+url));
 }
-
+ 
 function openShare(){
   const url=buildURL();
   document.getElementById('share-url-box').textContent=url;
@@ -357,27 +357,27 @@ function openShare(){
   document.getElementById('share-desc').textContent=desc;
   document.getElementById('share-modal').classList.add('open');
 }
-
+ 
 function closeModal(){document.getElementById('share-modal').classList.remove('open');document.getElementById('embed-box').style.display='none';}
 function closeStrip(){document.getElementById('share-strip').classList.remove('visible');}
-
+ 
 function copyFromModal(){
   const url=document.getElementById('share-url-box').textContent;
   navigator.clipboard.writeText(url).then(()=>{toast('Link copied to clipboard ✓');closeModal();}).catch(()=>toast('URL: '+url));
 }
-
+ 
 function shareTwitter(){
   const url=buildURL();
   const p1=pinA?pinA.split('/')[0]:'';const p2=pinB?pinB.split('/')[0]:'';
   const text=p1&&p2?`Health gap: ${p1} vs ${p2} in Baltimore — ${MCFG[curM].label} ${YEARS[curYI]}`:`Baltimore ${MCFG[curM].label} by neighborhood ${YEARS[curYI]}`;
   window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,'_blank');
 }
-
+ 
 function shareLinkedIn(){
   const url=buildURL();
   window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,'_blank');
 }
-
+ 
 function shareEmail(){
   const url=buildURL();
   const p1=pinA?pinA.split('/')[0]:'';const p2=pinB?pinB.split('/')[0]:'';
@@ -385,7 +385,7 @@ function shareEmail(){
   const body=`${subj}\n\nView this comparison on the Baltimore Health Dashboard:\n${url}\n\nData: BNIA Vital Signs · BCHD · ACS 5-yr`;
   window.open(`mailto:?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`);
 }
-
+ 
 function copyEmbed(doCopy){
   const url=buildURL();
   const code=`<iframe src="${url}&embed=1" width="100%" height="600" frameborder="0" style="border-radius:8px;border:1px solid #e0e0e0" title="Baltimore Health Dashboard"></iframe>`;
@@ -396,7 +396,7 @@ function copyEmbed(doCopy){
   document.getElementById('embed-code').textContent=code;
 }
 // ─────────────────────────────────────────────────────────────────────────────
-
+ 
 function geoName(props){return props?.Community||props?.CSA2010||props?.name||props?.Name||props?.NAME||'';}
 function gc(val,m){const c=MCFG[m],t=Math.max(0,Math.min(1,(val-c.min)/(c.max-c.min)));const n=c.inv?1-t:t;const p=c.inv?PAL_B:PAL_G;return p[Math.floor(n*4.99)];}
 function getStyle(f){const n=geoName(f.properties);const k=findK(n);const v=k?yv(k,curM,curYI):null;return{fillColor:v!==null?gc(v,curM):'#ccc',weight:1,opacity:1,color:'rgba(255,255,255,.65)',fillOpacity:ls.c?0.76:0};}
@@ -406,7 +406,7 @@ function setM(btn){document.querySelectorAll('.mtab').forEach(b=>b.classList.rem
 function onSlide(v){curYI=parseInt(v);document.getElementById('cur-yr').textContent=YEARS[curYI];if(geo)geo.setStyle(getStyle);refreshSide();updateShareStrip();}
 function togglePlay(){playing=!playing;document.getElementById('play-btn').textContent=playing?'■':'▶';if(playing){playT=setInterval(()=>{curYI=(curYI+1)%8;document.getElementById('yr-slider').value=curYI;onSlide(curYI);if(curYI===7){clearInterval(playT);playing=false;document.getElementById('play-btn').textContent='▶';}},800);}else clearInterval(playT);}
 function togL(l){ls[l]=!ls[l];document.getElementById('lt-'+l).classList.toggle('on',ls[l]);if(l==='c'&&geo)geo.setStyle(getStyle);if(l==='r')rMks.forEach(m=>ls.r?m.addTo(map):map.removeLayer(m));if(l==='3')cMks.forEach(m=>ls['3']?m.addTo(map):map.removeLayer(m));}
-
+ 
 function onNSAClick(e){
   const name=geoName(e.target.feature.properties);
   const k=findK(name);if(!k)return;
@@ -414,14 +414,14 @@ function onNSAClick(e){
   else if(activeSlot==='b'||!pinB){if(k===pinA){toast('Pin a different neighborhood for B');return;}pinB=k;activeSlot='a';}
   updatePinBar();updatePinStyles();refreshSide();updateShareStrip();
 }
-
+ 
 function updatePinBar(){
   (['a','b']).forEach((s,i)=>{const p=s==='a'?pinA:pinB,col=s==='a'?COL_A:COL_B;
     if(p){document.getElementById('empty-'+s).style.display='none';document.getElementById('dot-'+s).style.display='block';document.getElementById('info-'+s).style.display='flex';document.getElementById('name-'+s).textContent=p.split('/')[0];document.getElementById('score-'+s).textContent=yv(p,'hi',curYI);}
     else{document.getElementById('empty-'+s).style.display='block';document.getElementById('dot-'+s).style.display='none';document.getElementById('info-'+s).style.display='none';}
   });
 }
-
+ 
 function updatePinStyles(){
   if(!geo)return;
   geo.eachLayer(l=>{const name=geoName(l.feature?.properties);const k=findK(name);
@@ -430,17 +430,17 @@ function updatePinStyles(){
     else geo.resetStyle(l);
   });
 }
-
+ 
 function unpin(s){if(s==='a'){pinA=null;activeSlot='a';}else{pinB=null;activeSlot='b';}updatePinBar();updatePinStyles();refreshSide();updateShareStrip();}
 function focusSlot(s){activeSlot=s;}
-
+ 
 function refreshSide(){
   updatePinBar();
   if(!pinA&&!pinB){document.getElementById('no-pin').style.display='flex';document.getElementById('one-pin').style.display='none';document.getElementById('two-pin').style.display='none';return;}
   if(pinA&&!pinB){document.getElementById('no-pin').style.display='none';document.getElementById('one-pin').style.display='flex';document.getElementById('two-pin').style.display='none';renderOne();}
   else{document.getElementById('no-pin').style.display='none';document.getElementById('one-pin').style.display='none';document.getElementById('two-pin').style.display='flex';renderTwo();}
 }
-
+ 
 function swTab(btn,tab){
   const group=btn.closest('.pt-row');group.querySelectorAll('.pt').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
   const allPanes=['t-ov1','t-tr1','t-dt1','t-rp1','t-sb1','t-cmp','t-tra','t-det','t-rp2','t-sb2'];
@@ -448,7 +448,7 @@ function swTab(btn,tab){
   const el=document.getElementById('t-'+tab);if(el){el.style.display='flex';el.style.flexDirection='column';}
   if(tab==='tra')drawTrajChart();
 }
-
+ 
 function renderOne(){
   const p=pinA,yi=curYI,hiV=yv(p,'hi',yi),city=Math.round(58+.3*(yi-7));
   const good=hiV>=65,bad=hiV<45;
@@ -475,18 +475,18 @@ function renderOne(){
       <button onclick="openShare()" style="margin-top:5px;margin-left:4px;padding:3px 8px;font-size:10px;border-radius:4px;border:0.5px solid var(--br);background:var(--bg);color:var(--tx);cursor:pointer">More options</button>
     </div>
     <div class="src-n">BNIA Vital Signs · BCHD · ACS 5-yr</div>`;
-
+ 
   const keys=[{k:'hi',l:'Health idx'},{k:'le',l:'Life exp.'},{k:'as',l:'Asthma'},{k:'la',l:'Lead'},{k:'pv',l:'Poverty'},{k:'un',l:'Unemploy.'}];
   document.getElementById('t-tr1').innerHTML=`<div class="src-n" style="margin-bottom:4px">2016–${YEARS[yi]}</div>`+keys.map((kv,i)=>{const vals=allY(p,kv.k),cur=vals[yi],chg=Math.round((cur-vals[0])*10)/10;const good2=MCFG[kv.k].inv?(chg<0):(chg>0),col=good2?'#1D9E75':'#D85A30',sign=chg>=0?'+':'';return`<div style="display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:0.5px solid var(--br)"><div style="flex:1;font-size:10px;color:var(--t2)">${kv.l}</div><canvas id="spk1-${i}" width="60" height="18" style="flex-shrink:0"></canvas><div style="min-width:26px;font-size:11px;font-weight:500">${cur}${MCFG[kv.k].unit}</div><div style="font-size:9px;min-width:24px;text-align:right;color:${col}">${sign}${chg}</div></div>`;}).join('');
   requestAnimationFrame(()=>keys.forEach((kv,i)=>drawSpk('spk1-'+i,allY(p,kv.k),yi,COL_A)));
-
+ 
   // Added estimated city averages for the new 311 variables
   const cityDet={hi:58,le:69,as:61,la:38,pv:22,un:10.5,hs:83,va:10.1,hz:85,rt:30,dp:35,ws:20};
   document.getElementById('t-dt1').innerHTML=[['hi','Health idx',100,false,''],['le','Life exp',85,false,' yrs'],['as','Asthma ED',100,true,''],['la','Lead exp',75,true,'%'],['pv','Poverty',55,true,'%'],['un','Unemploy.',25,true,'%'],['va','Vacant',28,true,'%'],['hz','Total Hazards',250,true,' calls'],['rt','Rat Erad.',100,true,' calls'],['dp','Illegal Dump',100,true,' calls'],['ws','Water/Sewer',100,true,' calls']].map(([k,l,mx,inv,u])=>{
   renderReportsFor(p,'t-rp1');
   document.getElementById('t-sb1').innerHTML=makeSubmitForm(p);
 }
-
+ 
 function renderTwo(){
   const p1=pinA,p2=pinB,yi=curYI;
   const v1=yv(p1,'hi',yi),v2=yv(p2,'hi',yi),gap=Math.abs(v1-v2);
@@ -509,7 +509,7 @@ function renderTwo(){
       </div>
     </div>
     <div class="src-n">BNIA Vital Signs · ${YEARS[yi]}</div>`;
-
+ 
   document.getElementById('t-tra').innerHTML=`
     <div class="cmp-legend">
       <div class="cll"><div class="clsq" style="background:${COL_A}"></div>${p1.split('/')[0]}</div>
@@ -518,14 +518,14 @@ function renderTwo(){
     </div>
     <div style="position:relative;width:100%;height:140px"><canvas id="traj-chart"></canvas></div>
     <div class="src-n">Health index 2016–${YEARS[curYI]} · BNIA</div>`;
-
+ 
   document.getElementById('t-det').innerHTML=`<div style="display:flex;gap:8px;font-size:9px;margin-bottom:5px"><span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:3px;background:${COL_A};display:inline-block;border-radius:1px"></span>${p1.split('/')[0]}</span><span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:3px;background:${COL_B};display:inline-block;border-radius:1px"></span>${p2.split('/')[0]}</span></div>`+
     [['le','Life exp',85,' yrs'],['as','Asthma ED',100,''],['la','Lead',75,'%'],['pv','Poverty',55,'%'],['un','Unemploy.',25,'%'],['va','Vacant',28,'%'],['hz','Total Hazards',250,' calls'],['rt','Rat Erad.',100,' calls'],['dp','Illegal Dump',100,' calls'],['ws','Water/Sewer',100,' calls']].map(([k,l,mx,u])=>{
-
+ 
   renderReportsFor2(p1,p2,'t-rp2');
   document.getElementById('t-sb2').innerHTML=makeSubmitForm(p1,p2);
 }
-
+ 
 function drawTrajChart(){
   const p1=pinA,p2=pinB;if(!p1||!p2)return;
   const canvas=document.getElementById('traj-chart');if(!canvas)return;
@@ -537,16 +537,16 @@ function drawTrajChart(){
     {label:'City avg',data:cityVals,borderColor:'#aaa',backgroundColor:'transparent',borderWidth:1,borderDash:[3,3],tension:.3,pointRadius:0}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9},color:'#888'},grid:{display:false}},y:{ticks:{font:{size:9},color:'#888'},grid:{color:'rgba(0,0,0,.05)'}}}}});
 }
-
+ 
 function drawSpk(id,vals,yi,col){const c=document.getElementById(id);if(!c)return;const ctx=c.getContext('2d'),W=60,H=18;ctx.clearRect(0,0,W,H);const mn=Math.min(...vals)-1,mx2=Math.max(...vals)+1;ctx.beginPath();ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.lineJoin='round';vals.forEach((v,i)=>{const x=i*(W/(YEARS.length-1)),y=H-((v-mn)/(mx2-mn))*(H-4)-2;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.stroke();const cx=yi*(W/(YEARS.length-1)),cy=H-((vals[yi]-mn)/(mx2-mn))*(H-4)-2;ctx.beginPath();ctx.arc(cx,cy,2.5,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();}
-
+ 
 function renderReportsFor(nsa,tid){
   const k=nsa.split('/')[0].toLowerCase().trim();
   const items=REPORTS.filter(r=>r.nsa.split('/')[0].toLowerCase().trim()===k);
   const stM={open:'so',verified:'sv',review:'sr'},stL={open:'Open',verified:'Verified',review:'In review'};
   document.getElementById(tid).innerHTML=!items.length?`<div style="font-size:11px;color:var(--t3)">No reports yet.</div>`:items.map((r,i)=>`<div class="ric"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px"><div class="rit">${r.title}</div><span class="ris ${stM[r.status]}">${stL[r.status]}</span></div><div class="rim">${r.days}d ago</div><div class="ria"><button class="rib c" onclick="vt('v1${i}','c',${r.c})">Confirm <span id="v1${i}c">${r.c}</span></button><button class="rib d" onclick="vt('v1${i}','d',${r.d})">Dispute</button></div></div>`).join('');
 }
-
+ 
 function renderReportsFor2(p1,p2,tid){
   const k1=p1.split('/')[0].toLowerCase().trim(),k2=p2.split('/')[0].toLowerCase().trim();
   const items=REPORTS.filter(r=>{const rk=r.nsa.split('/')[0].toLowerCase().trim();return rk===k1||rk===k2;});
@@ -555,38 +555,37 @@ function renderReportsFor2(p1,p2,tid){
     `<div style="font-size:9px;color:var(--t3);margin-bottom:4px">Reports from both neighborhoods</div>`+
     items.map((r,i)=>{const isA=r.nsa.split('/')[0].toLowerCase().trim()===k1;return`<div class="ric"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px"><div><div class="rit">${r.title}</div><div style="font-size:9px;font-weight:500;color:${isA?COL_A:COL_B}">${isA?p1.split('/')[0]:p2.split('/')[0]}</div></div><span class="ris ${stM[r.status]}">${stL[r.status]}</span></div><div class="rim">${r.days}d ago</div><div class="ria"><button class="rib c" onclick="vt('v2${i}','c',${r.c})">Confirm <span id="v2${i}c">${r.c}</span></button><button class="rib d">Dispute</button></div></div>`;}).join('');
 }
-
+ 
 function vt(id,t,base){if(t!=='c')return toast('Dispute noted — moderator will review.');const el=document.getElementById(id+'c');if(el)el.textContent=parseInt(el.textContent)+1;toast('Confirmation recorded.');}
-
+ 
 function makeSubmitForm(p1,p2){return`<div style="font-size:10px;color:var(--t2);margin-bottom:2px">Neighborhood: <strong>${p1.split('/')[0]}${p2?` or ${p2.split('/')[0]}`:''}</strong></div><div class="rf">${p2?`<div><div class="rfl">Which neighborhood</div><select class="rfs"><option>${p1.split('/')[0]}</option><option>${p2.split('/')[0]}</option></select></div>`:''}<div><div class="rfl">Category</div><select class="rfs"><option>Infrastructure</option><option>Environmental hazard</option><option>Data challenge</option><option>Community asset</option><option>Safety</option></select></div><div><div class="rfl">Description</div><textarea class="rft" placeholder="What did you observe?"></textarea></div><button class="rfb" onclick="subR()">Submit report</button></div>`;}
 function subR(){toast('Report submitted · ID: BLT-'+Math.floor(1000+Math.random()*9000));}
-
+ 
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2800);}
-
+ 
 function initMks(){
   REPORTS.forEach(r=>{const ic=L.divIcon({className:'',html:`<div style="width:10px;height:10px;border-radius:50%;background:${r.color};border:2px solid white;cursor:pointer"></div>`,iconSize:[10,10],iconAnchor:[5,5]});const mk=L.marker([r.lat,r.lng],{icon:ic}).addTo(map);mk.bindPopup(`<div style="font-size:11px;font-family:sans-serif;min-width:130px"><strong>${r.title}</strong><br><span style="color:#888;font-size:10px">${r.nsa}</span></div>`,{closeButton:false});rMks.push(mk);});
   THREE11.forEach(c=>{const r=Math.max(8,Math.min(22,c.cnt/7));const ic=L.divIcon({className:'',html:`<div style="width:${r*2}px;height:${r*2}px;border-radius:50%;background:rgba(186,117,23,.55);border:1.5px solid #BA7517;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500;color:#412402">${c.cnt}</div>`,iconSize:[r*2,r*2],iconAnchor:[r,r]});cMks.push(L.marker([c.lat,c.lng],{icon:ic}));});
 }
-
+ 
 function initMap(){
   document.getElementById('ylabels').innerHTML=YEARS.map(y=>`<span>${y}</span>`).join('');
   map=L.map('balt-map',{zoomControl:true,attributionControl:false}).setView([39.29,-76.62],11);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-  // Load boundaries from the local repo file — avoids CORS issues with ArcGIS
   const urls=['csa_boundaries.geojson'];
-
+ 
   const tryFetch=(i=0)=>{
     if(i>=urls.length){
       document.getElementById('ml').innerHTML='<div style="max-width:260px;text-align:center;line-height:1.5">Map boundaries could not be loaded from the ArcGIS source right now. The rest of the dashboard is still available once the boundary endpoint is reachable.</div>';
       return;
     }
-
+ 
     // Fetch the dynamic data generated by our GitHub Action R pipeline
     fetch('data.json')
       .then(response => response.json())
       .then(data => {
         BASE = data; // Inject the fresh data
-
+ 
         // Now fetch the geographic boundaries
         fetch(urls[i])
           .then(r=>{
@@ -615,7 +614,7 @@ function initMap(){
                 });
               }
             }).addTo(map);
-
+ 
             buildLeg();
             initMks();
             if(ls.r) rMks.forEach(m=>m.addTo(map));
@@ -635,10 +634,10 @@ function initMap(){
         document.getElementById('ml').innerHTML = '<span>Error loading health data.</span>';
       });
   };
-
+ 
   tryFetch();
 }
-
+ 
 initMap();
 </script>
 </body>
