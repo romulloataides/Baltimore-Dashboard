@@ -119,6 +119,7 @@ body{margin:0;background:#f4f7fb;font-family:Inter,system-ui,-apple-system,Blink
       <button class="mtab" data-m="pv" onclick="setM(this)">Poverty</button>
       <button class="mtab" data-m="un" onclick="setM(this)">Unemploy.</button>
       <button class="mtab" data-m="hs" onclick="setM(this)">HS grad</button>
+      <button class="mtab" data-m="hz" onclick="setM(this)">311 Hazards</button>
     </div>
     <div class="ltoggs">
       <div class="ltog on" id="lt-c" onclick="togL('c')"><div class="ldot" style="background:var(--brand2)"></div>Map</div>
@@ -263,7 +264,7 @@ let BASE={};
 const RATES={hi:.4,le:.08,as:-.6,la:-.5,va:-.2,pv:-.3,un:-.25,hs:.15,fd:.3,gs:.1,hw:-.2,cr:-.5,in:.8,tp:.2,dp:.4};
 function yv(nsa,k,yi){const b=BASE[nsa];if(!b||b[k]===undefined)return null;const r=RATES[k]||0;const noise=Math.sin(yi*17+b[k])*.25;return Math.round((b[k]+r*(yi-7)+noise)*10)/10;}
 function allY(nsa,k){return YEARS.map((_,i)=>yv(nsa,k,i));}
-const MCFG={hi:{label:'Health index',min:25,max:87,inv:false,unit:''},le:{label:'Life exp.',min:59,max:82,inv:false,unit:' yrs'},as:{label:'Asthma ED /1k',min:14,max:97,inv:true,unit:''},la:{label:'Lead exp.',min:7,max:72,inv:true,unit:'%'},va:{label:'Vacant',min:1,max:28,inv:true,unit:'%'},pv:{label:'Poverty',min:3,max:52,inv:true,unit:'%'},un:{label:'Unemploy.',min:2,max:25,inv:true,unit:'%'},hs:{label:'HS grad',min:58,max:99,inv:false,unit:'%'}};
+const MCFG={hi:{label:'Health index',min:25,max:87,inv:false,unit:''},le:{label:'Life exp.',min:59,max:82,inv:false,unit:' yrs'},as:{label:'Asthma ED /1k',min:14,max:97,inv:true,unit:''},la:{label:'Lead exp.',min:7,max:72,inv:true,unit:'%'},va:{label:'Vacant',min:1,max:28,inv:true,unit:'%'},pv:{label:'Poverty',min:3,max:52,inv:true,unit:'%'},un:{label:'Unemploy.',min:2,max:25,inv:true,unit:'%'},hs:{label:'HS grad',min:58,max:99,inv:false,unit:'%'},hz:{label:'311 Hazards',min:0,max:250,inv:true,unit:' calls'}};
 const PAL_G=['#A32D2D','#D85A30','#EF9F27','#3A7CC4','#1D9E75'];
 const PAL_B=['#1D9E75','#3A7CC4','#EF9F27','#D85A30','#A32D2D'];
 const COL_A='#D85A30',COL_B='#1B4B82';
@@ -468,9 +469,9 @@ function renderOne(){
   document.getElementById('t-tr1').innerHTML=`<div class="src-n" style="margin-bottom:4px">2016–${YEARS[yi]}</div>`+keys.map((kv,i)=>{const vals=allY(p,kv.k),cur=vals[yi],chg=Math.round((cur-vals[0])*10)/10;const good2=MCFG[kv.k].inv?(chg<0):(chg>0),col=good2?'#1D9E75':'#D85A30',sign=chg>=0?'+':'';return`<div style="display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:0.5px solid var(--br)"><div style="flex:1;font-size:10px;color:var(--t2)">${kv.l}</div><canvas id="spk1-${i}" width="60" height="18" style="flex-shrink:0"></canvas><div style="min-width:26px;font-size:11px;font-weight:500">${cur}${MCFG[kv.k].unit}</div><div style="font-size:9px;min-width:24px;text-align:right;color:${col}">${sign}${chg}</div></div>`;}).join('');
   requestAnimationFrame(()=>keys.forEach((kv,i)=>drawSpk('spk1-'+i,allY(p,kv.k),yi,COL_A)));
 
-  const cityDet={hi:58,le:69,as:61,la:38,pv:22,un:10.5,hs:83,va:10.1};
-  document.getElementById('t-dt1').innerHTML=[['hi','Health idx',100,false,''],['le','Life exp',85,false,' yrs'],['as','Asthma ED',100,true,''],['la','Lead exp',75,true,'%'],['pv','Poverty',55,true,'%'],['un','Unemploy.',25,true,'%'],['hs','HS grad',100,false,'%'],['va','Vacant',28,true,'%']].map(([k,l,mx,inv,u])=>{const v=yv(p,k,yi),cv=cityDet[k]||50,pct=Math.min(100,Math.round((Math.abs(v)/mx)*100)),better=inv?v<cv:v>cv,col=better?'#1D9E75':'#D85A30',arr=better?'▲':'▼';return`<div class="vs-row"><div class="vs-lbl">${l}</div><div style="flex:1"><div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${col};border-radius:2px"></div></div></div><div style="width:28px;text-align:right;font-size:10px;font-weight:500">${v}${u}</div><div style="font-size:9px;color:${col};width:22px;text-align:right">${arr}${cv}</div></div>`;}).join('')+'<div class="src-n" style="margin-top:4px">BNIA · BCHD · ACS</div>';
-
+  // Added estimated city averages for the new 311 variables
+  const cityDet={hi:58,le:69,as:61,la:38,pv:22,un:10.5,hs:83,va:10.1,hz:85,rt:30,dp:35,ws:20};
+  document.getElementById('t-dt1').innerHTML=[['hi','Health idx',100,false,''],['le','Life exp',85,false,' yrs'],['as','Asthma ED',100,true,''],['la','Lead exp',75,true,'%'],['pv','Poverty',55,true,'%'],['un','Unemploy.',25,true,'%'],['va','Vacant',28,true,'%'],['hz','Total Hazards',250,true,' calls'],['rt','Rat Erad.',100,true,' calls'],['dp','Illegal Dump',100,true,' calls'],['ws','Water/Sewer',100,true,' calls']].map(([k,l,mx,inv,u])=>{
   renderReportsFor(p,'t-rp1');
   document.getElementById('t-sb1').innerHTML=makeSubmitForm(p);
 }
@@ -508,7 +509,7 @@ function renderTwo(){
     <div class="src-n">Health index 2016–${YEARS[curYI]} · BNIA</div>`;
 
   document.getElementById('t-det').innerHTML=`<div style="display:flex;gap:8px;font-size:9px;margin-bottom:5px"><span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:3px;background:${COL_A};display:inline-block;border-radius:1px"></span>${p1.split('/')[0]}</span><span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:3px;background:${COL_B};display:inline-block;border-radius:1px"></span>${p2.split('/')[0]}</span></div>`+
-    [['le','Life exp',85,' yrs'],['as','Asthma ED',100,''],['la','Lead',75,'%'],['pv','Poverty',55,'%'],['un','Unemploy.',25,'%'],['hs','HS grad',100,'%'],['va','Vacant',28,'%'],['fd','Food access',100,'%'],['gs','Green space',65,'%'],['cr','Crime /1k',100,'']].map(([k,l,mx,u])=>{const a=yv(p1,k,yi)||0,b=yv(p2,k,yi)||0,w1=Math.min(94,Math.round((a/mx)*94)),w2=Math.min(94,Math.round((b/mx)*94)),g=Math.abs(Math.round((a-b)*10)/10);return`<div style="padding:3px 0;border-bottom:0.5px solid var(--br)"><div style="display:flex;justify-content:space-between;margin-bottom:1px"><span style="font-size:9px;color:var(--t2)">${l}</span><span style="font-size:9px;color:var(--t3)">Δ${g}${u}</span></div><div style="display:flex;align-items:center;gap:3px;margin-bottom:1px"><div style="height:4px;width:${w1}%;background:${COL_A};border-radius:2px;min-width:2px"></div><span style="font-size:9px;color:${COL_A}">${a}${u}</span></div><div style="display:flex;align-items:center;gap:3px"><div style="height:4px;width:${w2}%;background:${COL_B};border-radius:2px;min-width:2px"></div><span style="font-size:9px;color:${COL_B}">${b}${u}</span></div></div>`;}).join('')+'<div class="src-n" style="margin-top:4px">BNIA · BCHD · ACS · EJScreen</div>';
+    [['le','Life exp',85,' yrs'],['as','Asthma ED',100,''],['la','Lead',75,'%'],['pv','Poverty',55,'%'],['un','Unemploy.',25,'%'],['va','Vacant',28,'%'],['hz','Total Hazards',250,' calls'],['rt','Rat Erad.',100,' calls'],['dp','Illegal Dump',100,' calls'],['ws','Water/Sewer',100,' calls']].map(([k,l,mx,u])=>{
 
   renderReportsFor2(p1,p2,'t-rp2');
   document.getElementById('t-sb2').innerHTML=makeSubmitForm(p1,p2);
