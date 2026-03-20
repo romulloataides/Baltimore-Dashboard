@@ -1,7 +1,6 @@
 library(tidyverse)
 library(sf)
 library(jsonlite)
-library(RSocrata)
 library(tidycensus)
 
 print("Starting Baltimore Health Data Pipeline...")
@@ -22,8 +21,11 @@ nsa_boundaries <- st_read(nsa_url, quiet = TRUE) %>%
 print("Fetching historical 311 data (this may take a few minutes)...")
 
 # Pull exactly 2016 through 2023 to match your JavaScript slider years
-three11_url <- "https://data.baltimorecity.gov/resource/ni4d-8w7k.json?$where=createddate >= '2016-01-01T00:00:00' AND createddate <= '2023-12-31T23:59:59'"
-raw_311 <- read.socrata(three11_url)
+# Switch the API endpoint from .json to .csv, and remove all spaces so the URL doesn't break
+three11_url <- "https://data.baltimorecity.gov/resource/ni4d-8w7k.csv?$where=createddate>='2016-01-01T00:00:00'%20AND%20createddate<='2023-12-31T23:59:59'"
+
+# Use the built-in tidyverse CSV reader instead of RSocrata
+raw_311 <- read_csv(three11_url)
 
 nsa_311_clean <- raw_311 %>%
   filter(srstatus != "Closed (Duplicate)", !is.na(latitude), !is.na(longitude)) %>%
