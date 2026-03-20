@@ -81,14 +81,11 @@ fetch_arcgis_layer <- function(service_url, out_fields) {
     )
   }
 
-  page_size <- meta$standardMaxRecordCountNoGeometry
-  if (is.null(page_size) || page_size <= 0) {
-    page_size <- meta$maxRecordCount
-  }
+  page_size <- meta$maxRecordCount
   if (is.null(page_size) || page_size <= 0) {
     page_size <- 2000L
   }
-  page_size <- min(as.integer(page_size), 32000L)
+  page_size <- min(as.integer(page_size), 2000L)
 
   offset <- 0L
   batches <- list()
