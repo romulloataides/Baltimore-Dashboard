@@ -1,46 +1,38 @@
 name: Baltimore Health Data Pipeline
 
-# Controls when the action will run. 
 on:
-  # Schedule: Runs automatically at 00:00 UTC on the 1st of every month
   schedule:
     - cron: '0 0 1 * *'
-  # Workflow Dispatch: Allows you to manually click a "Run" button in GitHub
   workflow_dispatch:
 
 jobs:
   update-data:
-    # The type of runner that the job will execute on
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Check out the repository code
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Set up the R environment
       - name: Setup R
         uses: r-lib/actions/setup-r@v2
         with:
           r-version: 'release'
+          # THIS IS THE MAGIC LINE: It forces ultra-fast, pre-compiled package downloads
+          use-public-rspm: true 
 
-# 3. Install Linux System Libraries (Required for spatial data and tidyverse)
       - name: Install System Libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libgdal-dev libudunits2-dev libgeos-dev libproj-dev
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libgdal-dev libudunits2-dev libgeos-dev libproj-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev
 
-      # 4. Install R Packages 
       - name: Install R Packages
         run: |
           install.packages(c("tidyverse", "jsonlite", "sf", "RSocrata"))
         shell: Rscript {0}
 
-      # 4. Run your ETL script to generate the new data.json
       - name: Run Data Pipeline Script
         run: Rscript update_data.R
 
-      # 5. Commit and push the new data.json back to the repository
       - name: Commit and Push Changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
