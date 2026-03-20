@@ -133,9 +133,15 @@ fetch_arcgis_layer <- function(service_url, out_fields) {
       break
     }
 
-    batch <- purrr::map_dfr(features, function(feature) {
-      tibble::as_tibble(feature$attributes)
+    attrs <- purrr::map(features, function(feature) {
+      if (is.null(feature$attributes)) list() else feature$attributes
     })
+
+    batch <- dplyr::bind_rows(lapply(attrs, tibble::as_tibble))
+
+    if (nrow(batch) == 0) {
+      break
+    }
 
     batches[[length(batches) + 1L]] <- batch
 
@@ -146,7 +152,7 @@ fetch_arcgis_layer <- function(service_url, out_fields) {
     offset <- offset + nrow(batch)
   }
 
-  bind_rows(batches)
+  dplyr::bind_rows(batches)
 }
 
 three11_sources <- c(
@@ -167,6 +173,18 @@ raw_311 <- purrr::imap_dfr(three11_sources, function(service_url, year_label) {
     out_fields = c("SRType", "SRStatus", "CreatedDate", "Neighborhood")
   )
 })
+
+required_cols <- c("SRType", "SRStatus", "CreatedDate", "Neighborhood")
+missing_cols <- setdiff(required_cols, names(raw_311))
+
+if (length(missing_cols) > 0) {
+  stop(
+    paste(
+      "311 data is missing required columns:",
+      paste(missing_cols, collapse = ", ")
+    )
+  )
+}
 
 neighborhood_lookup <- tibble(
   Neighborhood = unique(nsa_boundaries$Neighborhood),
@@ -313,4 +331,5 @@ json_ready_data <- split(final_dashboard_data, final_dashboard_data$Neighborhood
 write_json(json_ready_data, "data.json", auto_unbox = TRUE, pretty = TRUE)
 
 print("Pipeline Complete! Longitudinal data.json updated.")
+
 
