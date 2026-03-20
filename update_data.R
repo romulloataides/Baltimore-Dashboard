@@ -6,6 +6,15 @@ library(httr)
 
 print("Starting Baltimore Health Data Pipeline...")
 
+normalize_name <- function(x) {
+  x %>%
+    replace_na("") %>%
+    str_replace_all("&", " and ") %>%
+    str_replace_all("[^[:alnum:]]+", " ") %>%
+    str_squish() %>%
+    str_to_lower()
+}
+
 # 1. SETUP: Authenticate Census API
 census_key <- Sys.getenv("CENSUS_API_KEY")
 if (identical(census_key, "")) {
@@ -13,7 +22,7 @@ if (identical(census_key, "")) {
 }
 census_api_key(census_key)
 
-# 2. EXTRACT: Fetch Spatial Boundaries (Neighborhoods)
+# 2. EXTRACT: Fetch Spatial Boundaries
 print("Fetching neighborhood boundaries...")
 
 nsa_url <- paste0(
@@ -59,7 +68,14 @@ writeLines(boundary_text, "nsa_boundaries.geojson", useBytes = TRUE)
 nsa_boundaries <- st_read("nsa_boundaries.geojson", quiet = TRUE) %>%
   st_transform(crs = 4326) %>%
   select(Neighborhood = Name, geometry) %>%
-  mutate(Neighborhood = trimws(Neighborhood))
+  mutate(
+    Neighborhood = trimws(Neighborhood),
+    Neighborhood_key = normalize_name(Neighborhood)
+  )
+
+boundary_lookup <- nsa_boundaries %>%
+  st_drop_geometry() %>%
+  distinct(Neighborhood, Neighborhood_key)
 
 # 3. EXTRACT & TRANSFORM: Historical 311 Environmental Hazards
 print("Fetching historical 311 data...")
@@ -68,7 +84,10 @@ fetch_arcgis_layer <- function(service_url, out_fields) {
   meta_response <- GET(service_url, query = list(f = "json"), timeout(60))
   stop_for_status(meta_response)
 
-  meta <- fromJSON(content(meta_response, "text", encoding = "UTF-8"))
+  meta <- fromJSON(
+    content(meta_response, "text", encoding = "UTF-8"),
+    simplifyVector = FALSE
+  )
 
   if (!is.null(meta$error)) {
     stop(
@@ -106,7 +125,10 @@ fetch_arcgis_layer <- function(service_url, out_fields) {
     )
     stop_for_status(response)
 
-    payload <- fromJSON(content(response, "text", encoding = "UTF-8"))
+    payload <- fromJSON(
+      content(response, "text", encoding = "UTF-8"),
+      simplifyVector = FALSE
+    )
 
     if (!is.null(payload$error)) {
       stop(
@@ -124,14 +146,19 @@ fetch_arcgis_layer <- function(service_url, out_fields) {
       break
     }
 
-    if (is.data.frame(features) && "attributes" %in% names(features)) {
-      batch <- tibble::as_tibble(features$attributes)
-    } else if (is.list(features)) {
-      attrs <- purrr::map(features, "attributes")
-      batch <- dplyr::bind_rows(attrs)
-    } else {
-      stop(paste("Unexpected ArcGIS feature structure for", service_url))
-    }
+    batch <- purrr::map_dfr(features, function(feature) {
+      attr <- feature$attributes
+      if (is.null(attr)) {
+        attr <- list()
+      }
+
+      tibble(
+        SRType = if (is.null(attr$SRType)) NA_character_ else as.character(attr$SRType),
+        SRStatus = if (is.null(attr$SRStatus)) NA_character_ else as.character(attr$SRStatus),
+        CreatedDate = if (is.null(attr$CreatedDate)) NA_real_ else as.numeric(attr$CreatedDate),
+        Neighborhood = if (is.null(attr$Neighborhood)) NA_character_ else as.character(attr$Neighborhood)
+      )
+    })
 
     if (nrow(batch) == 0) {
       break
@@ -180,11 +207,6 @@ if (length(missing_cols) > 0) {
   )
 }
 
-neighborhood_lookup <- tibble(
-  Neighborhood = unique(nsa_boundaries$Neighborhood),
-  neighborhood_key = str_to_lower(str_squish(Neighborhood))
-)
-
 nsa_311_clean <- raw_311 %>%
   transmute(
     SRType = SRType,
@@ -195,9 +217,9 @@ nsa_311_clean <- raw_311 %>%
   filter(!is.na(CreatedDate), !is.na(Neighborhood_raw), Neighborhood_raw != "") %>%
   mutate(
     Year = lubridate::year(lubridate::as_datetime(CreatedDate / 1000, tz = "UTC")),
-    neighborhood_key = str_to_lower(Neighborhood_raw)
+    Neighborhood_key = normalize_name(Neighborhood_raw)
   ) %>%
-  left_join(neighborhood_lookup, by = "neighborhood_key") %>%
+  left_join(boundary_lookup, by = "Neighborhood_key") %>%
   filter(
     !is.na(Neighborhood),
     Year >= 2016,
@@ -213,30 +235,30 @@ nsa_311_clean <- raw_311 %>%
     )
   ) %>%
   filter(Category != "other") %>%
-  select(Neighborhood, Category, Year)
+  select(Neighborhood, Neighborhood_key, Category, Year)
 
 nsa_311_yearly <- nsa_311_clean %>%
-  group_by(Neighborhood, Category, Year) %>%
+  group_by(Neighborhood, Neighborhood_key, Category, Year) %>%
   summarize(Total = n(), .groups = "drop")
 
 total_hazards <- nsa_311_yearly %>%
-  group_by(Neighborhood, Year) %>%
+  group_by(Neighborhood, Neighborhood_key, Year) %>%
   summarize(Total = sum(Total), .groups = "drop") %>%
   mutate(Category = "hz")
 
 all_311_yearly <- bind_rows(nsa_311_yearly, total_hazards)
 
-complete_grid <- expand_grid(
-  Neighborhood = unique(nsa_boundaries$Neighborhood),
+complete_grid <- tidyr::crossing(
+  boundary_lookup,
   Category = c("rt", "dp", "ws", "hz"),
   Year = 2016:2023
 )
 
 nsa_311_arrays <- complete_grid %>%
-  left_join(all_311_yearly, by = c("Neighborhood", "Category", "Year")) %>%
+  left_join(all_311_yearly, by = c("Neighborhood", "Neighborhood_key", "Category", "Year")) %>%
   mutate(Total = replace_na(Total, 0)) %>%
   arrange(Neighborhood, Category, Year) %>%
-  group_by(Neighborhood, Category) %>%
+  group_by(Neighborhood, Neighborhood_key, Category) %>%
   summarize(yearly_array = list(as.numeric(Total)), .groups = "drop") %>%
   pivot_wider(names_from = Category, values_from = yearly_array)
 
@@ -264,10 +286,13 @@ baltimore_acs <- get_acs(
   ) %>%
   select(GEOID, pv, geometry)
 
-nsa_acs_summary <- st_intersection(nsa_boundaries, baltimore_acs) %>%
+nsa_acs_summary <- st_intersection(
+  nsa_boundaries %>% select(Neighborhood, Neighborhood_key),
+  baltimore_acs
+) %>%
   mutate(intersect_area = st_area(geometry)) %>%
   st_drop_geometry() %>%
-  group_by(Neighborhood) %>%
+  group_by(Neighborhood, Neighborhood_key) %>%
   summarize(
     pv = round(weighted.mean(pv, as.numeric(intersect_area), na.rm = TRUE), 1),
     .groups = "drop"
@@ -296,15 +321,22 @@ if (file.exists(base_data_path)) {
     Neighborhood = names(current_data_raw),
     data = unname(current_data_raw)
   ) %>%
-    unnest_wider(data)
+    unnest_wider(data) %>%
+    mutate(Neighborhood_key = normalize_name(Neighborhood))
 } else {
   stop("Missing initial data.json to use as a base.")
 }
 
 final_dashboard_data <- current_data %>%
   select(-any_of(c("pv", "rt", "dp", "ws", "hz"))) %>%
-  left_join(nsa_acs_summary, by = "Neighborhood") %>%
-  left_join(nsa_311_arrays, by = "Neighborhood") %>%
+  left_join(
+    nsa_acs_summary %>% select(Neighborhood_key, pv),
+    by = "Neighborhood_key"
+  ) %>%
+  left_join(
+    nsa_311_arrays %>% select(Neighborhood_key, rt, dp, ws, hz),
+    by = "Neighborhood_key"
+  ) %>%
   mutate(pv = replace_na(pv, 0))
 
 array_cols <- intersect(c("rt", "dp", "ws", "hz"), names(final_dashboard_data))
@@ -319,7 +351,10 @@ if (length(array_cols) > 0) {
 # 6. LOAD: Write to JSON
 print("Formatting and writing output...")
 
-json_ready_data <- split(final_dashboard_data, final_dashboard_data$Neighborhood) %>%
+json_source <- final_dashboard_data %>%
+  select(-Neighborhood_key)
+
+json_ready_data <- split(json_source, json_source$Neighborhood) %>%
   map(~ .x %>% select(-Neighborhood) %>% as.list() %>% map(~ .x[[1]]))
 
 write_json(json_ready_data, "data.json", auto_unbox = TRUE, pretty = TRUE)
