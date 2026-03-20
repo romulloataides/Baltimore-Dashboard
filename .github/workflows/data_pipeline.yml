@@ -1,45 +1,36 @@
 name: Baltimore Health Data Pipeline
-
 on:
   schedule:
     - cron: '0 0 1 * *'
   workflow_dispatch:
-
 permissions:
   contents: write
-
 jobs:
   update-data:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
       - name: Setup R
         uses: r-lib/actions/setup-r@v2
         with:
           r-version: 'release'
-          use-public-rspm: true 
-
+          use-public-rspm: true
       - name: Install System Libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libgdal-dev libudunits2-dev libgeos-dev libproj-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev
-
       - name: Install R Packages
         run: |
           install.packages(c("tidyverse", "jsonlite", "sf", "RSocrata", "tidycensus"))
         shell: Rscript {0}
-
       - name: Run Data Pipeline Script
         run: Rscript update_data.R
         env:
           CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
-
       - name: Commit and Push Changes
-        - uses: stefanzweifel/git-auto-commit-action@v5
-  with:
-    commit_message: Automated SDoH data update
-    file_pattern: data.json
-    push_options: '--force'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Automated SDoH data update
+          file_pattern: data.json
+          push_options: '--force'
